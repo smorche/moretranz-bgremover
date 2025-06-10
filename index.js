@@ -1,47 +1,44 @@
-
-require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
-const FormData = require('form-data');
-const axios = require('axios');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+const cors = require('cors');
+const FormData = require('form-data');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const upload = multer({ dest: 'uploads/' });
+app.use(cors());
+app.use(express.static('public'));
 
-app.use(express.static(path.join(__dirname, 'public')));
+const upload = multer({ dest: 'uploads/' });
 
 app.post('/remove-background', upload.single('image'), async (req, res) => {
   const filePath = req.file.path;
 
   try {
-    const imageBuffer = fs.readFileSync(filePath);
-    const base64Image = imageBuffer.toString('base64');
+    const form = new FormData();
+    form.append('image', fs.createReadStream(filePath));
 
     const response = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
-      {
-        image: base64Image,
-      },
+      form,
       {
         headers: {
           'Authorization': `Bearer ${process.env.PIXELCUT_API_KEY}`,
-          'Content-Type': 'application/json'
+          ...form.getHeaders(),
         },
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
       }
     );
 
-    const resultBuffer = response.data;
-    const imageDataUrl = `data:image/png;base64,${Buffer.from(resultBuffer).toString('base64')}`;
-
-    fs.unlinkSync(filePath);
+    const imageDataUrl = `data:image/png;base64,${Buffer.from(response.data).toString('base64')}`;
+    fs.unlinkSync(filePath); // Clean up temp file
     res.json({ image: imageDataUrl });
   } catch (error) {
-    console.error('Upscale error:', error.response?.data || error.message);
+    console.error('Background removal error:', error.response?.data || error.message);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     res.status(500).json({ error: 'Background removal failed.' });
   }
