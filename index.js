@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const FormData = require('form-data');
 const fetch = require('node-fetch');
+const streamifier = require('streamifier');
 require('dotenv').config();
 
 const app = express();
@@ -21,8 +22,8 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const form = new FormData();
-    form.append('image_file', req.file.buffer, {
+    const stream = streamifier.createReadStream(req.file.buffer);
+    form.append('image_file', stream, {
       filename: req.file.originalname,
       contentType: req.file.mimetype
     });
