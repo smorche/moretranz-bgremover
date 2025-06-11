@@ -17,7 +17,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
   try {
     const form = new FormData();
-    form.append('image', fs.createReadStream(filePath));
+    form.append('image_file', fs.createReadStream(filePath));  // <-- FIXED FIELD NAME
 
     const response = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
@@ -43,5 +43,5 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Background Remover running on port ${PORT}`);
+  console.log(`PixelCut Background Remover running on port ${PORT}`);
 });
