@@ -6,7 +6,7 @@ const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() }); // buffer-based
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.static('public'));
@@ -19,7 +19,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
     }
 
     const form = new FormData();
-    form.append('image_file', file.buffer, {
+    form.append('image', file.buffer, {
       filename: file.originalname,
       contentType: file.mimetype
     });
@@ -46,5 +46,5 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`PixelCut Background Remover running on port ${PORT}`);
+  console.log(`✅ PixelCut Background Remover is running on port ${PORT}`);
 });
