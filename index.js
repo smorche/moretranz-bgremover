@@ -31,7 +31,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       }
     );
 
-    fs.unlinkSync(filePath); // Clean up temp file
+    fs.unlinkSync(filePath);
     const resultBase64 = Buffer.from(response.data).toString('base64');
     res.json({ image: `data:image/png;base64,${resultBase64}` });
   } catch (err) {
