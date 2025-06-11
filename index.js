@@ -1,9 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const fetch = require('node-fetch');
+const axios = require('axios');
 const FormData = require('form-data');
-const streamifier = require('streamifier');
 require('dotenv').config();
 
 const app = express();
@@ -22,44 +21,41 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    // Prepare stream and form
     const form = new FormData();
-    const stream = streamifier.createReadStream(req.file.buffer);
-    form.append('image_file', stream, {
+    form.append('image_file', req.file.buffer, {
       filename: req.file.originalname || 'upload.jpg',
       contentType: req.file.mimetype || 'image/jpeg'
     });
 
-    console.log('📤 Sending to PixelCut using fetch...');
+    console.log('📤 Sending to PixelCut using axios...');
 
-    // Send request to PixelCut
-    const response = await fetch('https://api.developer.pixelcut.ai/v1/remove-background', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': process.env.PIXELCUT_API_KEY,
-        ...form.getHeaders()
-      },
-      body: form
-    });
+    const response = await axios.post(
+      'https://api.developer.pixelcut.ai/v1/remove-background',
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          'X-API-KEY': process.env.PIXELCUT_API_KEY
+        }
+      }
+    );
 
-    const result = await response.json();
-
-    if (!response.ok || !result.result_url) {
-      console.error('❌ PixelCut error:', result);
-      return res.status(500).json({ error: result.error || 'PixelCut failed' });
+    const resultUrl = response.data?.result_url;
+    if (!resultUrl) {
+      console.error('❌ PixelCut returned no result_url:', response.data);
+      return res.status(500).json({ error: 'PixelCut did not return result_url' });
     }
 
-    console.log('✅ PixelCut result URL:', result.result_url);
+    console.log('✅ PixelCut result URL:', resultUrl);
 
-    // Fetch the upscaled image and return it
-    const imageResponse = await fetch(result.result_url);
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const base64 = Buffer.from(imageBuffer).toString('base64');
+    // Download the result image and encode as base64
+    const imageResponse = await axios.get(resultUrl, { responseType: 'arraybuffer' });
+    const base64 = Buffer.from(imageResponse.data).toString('base64');
 
     res.json({ image: `data:image/png;base64,${base64}` });
 
   } catch (error) {
-    console.error('❌ Background removal error:', error.message);
+    console.error('❌ Background removal error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Background removal failed' });
   }
 });
