@@ -16,9 +16,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
     const form = new FormData();
-    form.append('image_file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
+    form.append('image_file', req.file.buffer, req.file.originalname);
     });
 
     const pixelcutResponse = await axios.post(
