@@ -25,7 +25,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       {
         headers: {
           ...form.getHeaders(),
-          'Authorization': `Bearer ${process.env.PIXELCUT_API_KEY}`
+          'X-API-KEY': process.env.PIXELCUT_API_KEY
         },
         responseType: 'arraybuffer'
       }
