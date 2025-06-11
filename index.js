@@ -6,6 +6,9 @@ const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
 const upload = multer();
 app.use(cors());
 
