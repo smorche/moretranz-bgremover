@@ -14,46 +14,54 @@ app.use(express.static('public'));
 app.post('/remove-background', upload.single('image'), async (req, res) => {
   try {
     console.log('📥 Incoming request to /remove-background');
-    console.log('File received:', !!req.file);
-
     if (!req.file || !req.file.buffer) {
-      console.error('❌ No file buffer received');
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const form = new FormData();
-    form.append('image_file', req.file.buffer, {
-      filename: req.file.originalname || 'upload.jpg',
-      contentType: req.file.mimetype || 'image/jpeg'
-    });
+    // Step 1: Upload to ImgBB
+    const imgbbApiKey = process.env.IMGBB_API_KEY;
+    const base64Image = req.file.buffer.toString('base64');
 
-    console.log('📤 Sending to PixelCut using axios...');
+    const imgbbResponse = await axios.post(
+      `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,
+      new URLSearchParams({ image: base64Image })
+    );
 
-    const response = await axios.post(
+    const uploadedUrl = imgbbResponse.data?.data?.url;
+    if (!uploadedUrl) {
+      console.error('❌ ImgBB upload failed:', imgbbResponse.data);
+      return res.status(500).json({ error: 'ImgBB upload failed' });
+    }
+
+    console.log('✅ Uploaded to ImgBB:', uploadedUrl);
+
+    // Step 2: Call PixelCut with image_url
+    const pixelcutResponse = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
-      form,
+      {
+        image_url: uploadedUrl,
+        format: 'png'
+      },
       {
         headers: {
-          ...form.getHeaders(),
+          'Content-Type': 'application/json',
           'X-API-KEY': process.env.PIXELCUT_API_KEY
         }
       }
     );
 
-    const resultUrl = response.data?.result_url;
+    const resultUrl = pixelcutResponse.data?.result_url;
     if (!resultUrl) {
-      console.error('❌ PixelCut returned no result_url:', response.data);
-      return res.status(500).json({ error: 'PixelCut did not return result_url' });
+      console.error('❌ PixelCut did not return result_url:', pixelcutResponse.data);
+      return res.status(500).json({ error: 'PixelCut failed' });
     }
 
     console.log('✅ PixelCut result URL:', resultUrl);
 
-    // Download the result image and encode as base64
     const imageResponse = await axios.get(resultUrl, { responseType: 'arraybuffer' });
     const base64 = Buffer.from(imageResponse.data).toString('base64');
 
     res.json({ image: `data:image/png;base64,${base64}` });
-
   } catch (error) {
     console.error('❌ Background removal error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Background removal failed' });
@@ -62,5 +70,5 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ MoreTranz Background Remover running on port ${PORT}`);
+  console.log(`✅ MoreTranz Background Remover (ImgBB) running on port ${PORT}`);
 });
