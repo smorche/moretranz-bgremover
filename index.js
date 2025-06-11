@@ -7,12 +7,12 @@ const streamifier = require('streamifier');
 require('dotenv').config();
 
 const app = express();
-const upload = multer(); // in-memory
+const upload = multer(); // In-memory file buffer
 
 app.use(cors());
 app.use(express.static('public'));
 
-// Configure Cloudinary
+// Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -23,7 +23,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
-    // Upload to Cloudinary
+    // Upload image to Cloudinary
     const uploadedUrl = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: 'moretranz/bg-remover' },
@@ -35,14 +35,14 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     });
 
-    console.log('✅ Uploaded to Cloudinary:', uploadedUrl); // ✅ now safe to access
+    console.log('✅ Uploaded to Cloudinary:', uploadedUrl);
 
-    // Send to PixelCut
+    // Call PixelCut API
     const response = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
       {
         image_url: uploadedUrl,
-        format: 'png'
+        format: 'png' // Required when using image_url
       },
       {
         headers: {
@@ -53,7 +53,18 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       }
     );
 
-    console.log('✅ PixelCut response received. Size:', response.data.length);
+    // Check response content type
+    const contentType = response.headers['content-type'];
+    console.log('🧪 PixelCut Content-Type:', contentType);
+
+    if (!contentType.includes('image')) {
+      const errorText = Buffer.from(response.data).toString('utf-8');
+      console.error('❌ PixelCut returned error JSON:', errorText);
+      return res.status(500).json({
+        error: 'PixelCut returned an error',
+        details: errorText
+      });
+    }
 
     const base64 = Buffer.from(response.data).toString('base64');
     res.json({ image: `data:image/png;base64,${base64}` });
