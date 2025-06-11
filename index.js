@@ -24,6 +24,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
     // Upload to Cloudinary
+    console.log('Cloudinary URL:', uploadedUrl);
     const uploadedUrl = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: 'moretranz/bg-remover' },
@@ -33,6 +34,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
         }
       );
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    console.log('PixelCut response length:', response.data.length);
     });
 
     // Send URL to PixelCut API with required format
