@@ -18,16 +18,17 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    // Step 1: Upload to ImgBB
+    // Step 1: Upload to ImgBB with expiration (auto-clean)
     const imgbbApiKey = process.env.IMGBB_API_KEY;
     const base64Image = req.file.buffer.toString('base64');
 
     const imgbbResponse = await axios.post(
       `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,
-      new URLSearchParams({ 
+      new URLSearchParams({
         image: base64Image,
-        expiration: '600' // auto-delete after 10 minutes
+        expiration: '600' // delete after 10 minutes
       })
+    );
 
     const uploadedUrl = imgbbResponse.data?.data?.url;
     if (!uploadedUrl) {
@@ -63,7 +64,10 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
     const imageResponse = await axios.get(resultUrl, { responseType: 'arraybuffer' });
     const base64 = Buffer.from(imageResponse.data).toString('base64');
 
-    res.json({ image: `data:image/png;base64,${base64}` });
+    res.json({
+      original: uploadedUrl,
+      image: `data:image/png;base64,${base64}`
+    });
   } catch (error) {
     console.error('❌ Background removal error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Background removal failed' });
