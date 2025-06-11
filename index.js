@@ -22,7 +22,9 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
+    const form = new FormData();
     const stream = streamifier.createReadStream(req.file.buffer);
+    
     form.append('image_file', stream, {
       filename: req.file.originalname,
       contentType: req.file.mimetype
