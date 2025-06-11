@@ -7,11 +7,12 @@ const streamifier = require('streamifier');
 require('dotenv').config();
 
 const app = express();
-const upload = multer();
+const upload = multer(); // in-memory
 
 app.use(cors());
 app.use(express.static('public'));
 
+// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -24,18 +25,22 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
     // Upload to Cloudinary
     const uploadedUrl = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream({ folder: 'moretranz/bg-remover' }, (error, result) => {
-        if (error) return reject(error);
-        resolve(result.secure_url);
-      });
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: 'moretranz/bg-remover' },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result.secure_url);
+        }
+      );
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     });
 
-    // Send Cloudinary image URL to PixelCut API
+    // Send URL to PixelCut API with required format
     const response = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
       {
-        image_url: uploadedUrl
+        image_url: uploadedUrl,
+        format: 'png'
       },
       {
         headers: {
@@ -48,6 +53,7 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
     const base64 = Buffer.from(response.data).toString('base64');
     res.json({ image: `data:image/png;base64,${base64}` });
+
   } catch (error) {
     console.error('Background removal error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Background removal failed' });
@@ -56,5 +62,5 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ PixelCut Background Remover (Cloudinary) running on port ${PORT}`);
+  console.log(`✅ MoreTranz Background Remover running on port ${PORT}`);
 });
