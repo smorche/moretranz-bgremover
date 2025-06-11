@@ -24,8 +24,10 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
     const imgbbResponse = await axios.post(
       `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,
-      new URLSearchParams({ image: base64Image })
-    );
+      new URLSearchParams({ 
+        image: base64Image,
+        expiration: '600' // auto-delete after 10 minutes
+      })
 
     const uploadedUrl = imgbbResponse.data?.data?.url;
     if (!uploadedUrl) {
