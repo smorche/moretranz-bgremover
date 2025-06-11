@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MoreTranz Background Remover</title>
   <style>
     body {
@@ -26,28 +26,6 @@
     #drop-area.dragover {
       background-color: #111;
     }
-    #comparison {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 2rem;
-      flex-wrap: wrap;
-      width: 100%;
-      margin: 2rem auto;
-      display: none;
-    }
-    .image-container {
-      width: 45%;
-    }
-    .image-container img {
-      width: 100%;
-      max-width: 100%;
-      max-height: 600px;
-      height: auto;
-      border: 1px solid #00f0ff;
-      border-radius: 6px;
-      object-fit: contain;
-    }
     .loader {
       border: 6px solid #f3f3f3;
       border-top: 6px solid #00f0ff;
@@ -61,7 +39,37 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    button {
+    #slider-container {
+      position: relative;
+      width: 90%;
+      max-width: 800px;
+      margin: 2rem auto;
+      overflow: hidden;
+    }
+    #comparison-slider {
+      width: 100%;
+      height: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      clip-path: inset(0 50% 0 0);
+      transition: clip-path 0.2s ease;
+    }
+    #slider-wrapper {
+      position: relative;
+    }
+    #slider-range {
+      width: 100%;
+      margin-top: 1rem;
+    }
+    .img-layer {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+    #downloadBtn {
       margin-top: 1rem;
       padding: 0.5rem 1rem;
       background-color: #00f0ff;
@@ -69,80 +77,67 @@
       color: #000;
       cursor: pointer;
       font-weight: bold;
-    }
-    #afterImageContainer {
       display: none;
-    }
-    .subtitle {
-      color: #fff;
-      font-size: 1rem;
-      margin-top: -1rem;
-      margin-bottom: 2rem;
     }
   </style>
 </head>
 <body>
   <h1>MoreTranz Background Remover</h1>
-  <div class="subtitle">Upload your image and remove the background instantly with AI — optimized for professional DTF results.</div>
+  <div class="subtitle">Upload your image and remove the background instantly with AI — optimized for stunning, high-resolution DTF transfers.</div>
 
   <div id="drop-area">
     <p>Drag & Drop Image Here or Click to Select</p>
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <input type="file" id="fileInput" accept="image/*" style="display:none" />
   </div>
 
   <div class="loader" id="loader" style="display:none;"></div>
 
-  <div id="comparison">
-    <div class="image-container">
-      <img id="beforeImage" src="" alt="Original">
-      <p>Original</p>
+  <div id="slider-wrapper" style="display:none">
+    <div id="slider-container">
+      <img id="originalImage" class="img-layer" src="" alt="Original">
+      <img id="comparison-slider" class="img-layer" src="" alt="Background Removed">
     </div>
-    <div class="image-container" id="afterImageContainer">
-      <img id="afterImage" src="" alt="Background Removed">
-      <p>Background Removed</p>
-    </div>
+    <input type="range" id="slider-range" min="0" max="100" value="50" />
   </div>
-  <button id="downloadBtn" style="display:none">Download</button>
+
+  <button id="downloadBtn">Download</button>
 
   <script>
     const dropArea = document.getElementById('drop-area');
     const fileInput = document.getElementById('fileInput');
     const loader = document.getElementById('loader');
-    const beforeImage = document.getElementById('beforeImage');
-    const afterImage = document.getElementById('afterImage');
+    const originalImage = document.getElementById('originalImage');
+    const removedImage = document.getElementById('comparison-slider');
+    const sliderWrapper = document.getElementById('slider-wrapper');
+    const sliderRange = document.getElementById('slider-range');
     const downloadBtn = document.getElementById('downloadBtn');
-    const comparison = document.getElementById('comparison');
-    const afterImageContainer = document.getElementById('afterImageContainer');
 
     dropArea.addEventListener('click', () => fileInput.click());
-    dropArea.addEventListener('dragover', (e) => {
+    dropArea.addEventListener('dragover', e => {
       e.preventDefault();
       dropArea.classList.add('dragover');
     });
     dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
-    dropArea.addEventListener('drop', (e) => {
+    dropArea.addEventListener('drop', e => {
       e.preventDefault();
       dropArea.classList.remove('dragover');
       fileInput.files = e.dataTransfer.files;
-      uploadAndRemoveBackground();
+      handleUpload();
     });
-    fileInput.addEventListener('change', uploadAndRemoveBackground);
+    fileInput.addEventListener('change', handleUpload);
 
-    function uploadAndRemoveBackground() {
+    sliderRange.addEventListener('input', () => {
+      const value = sliderRange.value;
+      removedImage.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
+    });
+
+    function handleUpload() {
       const file = fileInput.files[0];
       if (!file) return alert('Please choose or drop an image');
 
       loader.style.display = 'block';
+      sliderWrapper.style.display = 'none';
       downloadBtn.style.display = 'none';
-      comparison.style.display = 'none';
-      afterImageContainer.style.display = 'none';
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        beforeImage.src = reader.result;
-        comparison.style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
 
       const formData = new FormData();
       formData.append('image', file);
@@ -151,24 +146,29 @@
         method: 'POST',
         body: formData
       })
-      .then(res => res.json())
-      .then(data => {
-        loader.style.display = 'none';
-        afterImage.src = data.image;
-        afterImageContainer.style.display = 'block';
-        downloadBtn.style.display = 'inline-block';
-        downloadBtn.onclick = () => {
-          const link = document.createElement('a');
-          link.href = data.image;
-          link.download = 'bg-removed-image.png';
-          link.click();
-        };
-      })
-      .catch(err => {
-        loader.style.display = 'none';
-        console.error(err);
-        alert('Background removal failed.');
-      });
+        .then(res => res.json())
+        .then(data => {
+          loader.style.display = 'none';
+          if (!data.image || !data.original) throw new Error('Missing image data');
+
+          originalImage.src = data.original;
+          removedImage.src = data.image;
+          removedImage.style.clipPath = 'inset(0 50% 0 0)';
+          sliderWrapper.style.display = 'block';
+          downloadBtn.style.display = 'inline-block';
+
+          downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.href = data.image;
+            link.download = 'background-removed.png';
+            link.click();
+          };
+        })
+        .catch(err => {
+          loader.style.display = 'none';
+          console.error(err);
+          alert('Background removal failed.');
+        });
     }
   </script>
 </body>
