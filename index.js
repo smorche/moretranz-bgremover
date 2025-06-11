@@ -3,8 +3,7 @@ const multer = require('multer');
 const cors = require('cors');
 const axios = require('axios');
 const FormData = require('form-data');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
 const app = express();
 const upload = multer();
@@ -22,13 +21,17 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
       contentType: req.file.mimetype
     });
 
-    const response = await axios.post('https://api.pixelcut.ai/v1/remove-background', form, {
+    const response = await axios.post(
+      'https://api.pixelcut.ai/v1/remove-background',
+      form,
+      {
         headers: {
           ...form.getHeaders(),
-          'x-api-key': process.env.PIXELCUT_API_KEY,
+          Authorization: `Bearer ${process.env.PIXELCUT_API_KEY}`
         },
         responseType: 'arraybuffer'
-    )};
+      }
+    );
 
     res.set('Content-Type', 'image/png');
     res.send(response.data);
