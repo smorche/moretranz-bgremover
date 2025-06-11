@@ -30,8 +30,10 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
     });
 
     const form = new FormData();
-    form.append('image_file', req.file.buffer, req.file.originalname);
-
+    form.append('image_file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
     console.log('📤 Sending to PixelCut...');
 
     const pixelcutResponse = await axios.post(
