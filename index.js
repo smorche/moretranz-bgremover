@@ -6,19 +6,22 @@ const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
-const upload = multer(); // In-memory file storage
+const upload = multer({ storage: multer.memoryStorage() }); // ✅ Important!
 
 app.use(cors());
 app.use(express.static('public'));
 
 app.post('/remove-background', upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
     const form = new FormData();
-    form.append('image_file', req.file.buffer, req.file.originalname);
+    form.append('image_file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
 
     const pixelcutResponse = await axios.post(
       'https://api.developer.pixelcut.ai/v1/remove-background',
@@ -33,8 +36,8 @@ app.post('/remove-background', upload.single('image'), async (req, res) => {
 
     const resultUrl = pixelcutResponse.data?.result_url;
     if (!resultUrl) {
-      console.error('❌ PixelCut returned unexpected response:', pixelcutResponse.data);
-      return res.status(500).json({ error: 'Invalid PixelCut response' });
+      console.error('❌ Unexpected PixelCut response:', pixelcutResponse.data);
+      return res.status(500).json({ error: 'PixelCut returned no result_url' });
     }
 
     console.log('✅ PixelCut result URL:', resultUrl);
